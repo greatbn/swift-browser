@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script>
+function httpGet(container,filename)
+{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( "GET", "/token", false ); // false for synchronous request
+    xmlHttp.send( null );
+    var data = JSON.parse(xmlHttp.responseText);
+    var url = data['storage_url'] + '/'+container +'/'+ filename;
+    var token = data['token'];
+   //  console.log(url);
+   //  console.log(token);
+   //  var xhttp = new XMLHttpRequest()
+   //  xhttp.open("GET", url, true);
+   //  xhttp.setRequestHeader("X-Auth-Token",token); 
+  	// xhttp.send();
+
+  	$.ajax({
+    url: url,
+    type: 'GET',
+    headers: {"X-Auth-Token":token},
+    success: function() {
+        window.open(url);
+    }
+	});
+}
+
+</script>
+{% endblock %}
+{% block content %}
+<table style="width:100%">
+	<tr>
+		<td valign="top" style="width:40%;height:100%;">
+			<div class="panel panel-default ">
+			  <div class="panel-heading">
+			    <h3 class="panel-title">Containers</h3>
+			  </div>
+			  <div class="panel-body">
+			    <table class="table table-bordered">
+				    <thead>
+				      <tr>
+				        <th>Name</th>
+				        <th>Details</th>
+				        <th>Action</th>
+				      </tr>
+				    </thead>
+				    <tbody>
+				     {% for i in range(0,list_containers|length) %}
+				     	<tr>
+				     		<td><a href="/containers/{{ list_containers[i]['name'] }}">{{ list_containers[i]['name'] }}</a></td>
+				    		<td>
+				     		Object Count: {{ list_containers[i]['count'] }}<br>
+				     		Size: {{ list_containers[i]['bytes']|filesizeformat }}<br>	
+				     		</td>
+				     		<td><!-- Single button -->
+							<div class="btn-group">
+							<button type="button" class="btn btn-primary">View Details</button>
+							  <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							    <span class="caret"></span>
+							  </button>
+							  <ul class="dropdown-menu">
+							    <li><a href="#">Make Public</a></li>
+							    <li><a href="/containers/{{ list_containers[i]['name'] }}?action=delete_container">Delete Container</a></li>
+							  </ul>
+							</div>
+							</td>
+				     	</tr>
+				     {% endfor %}
+				    </tbody>
+				  </table>
+			  </div>
+			</div>
+		</td>
+		<td valign="top" style="width:60%;height:100%">	
+		{% if container_info == None %}
+			<div class="panel panel-default" style="size:100%">
+			  <div class="panel-heading">
+			   	<h3 class="panel-title"> Select a container to browse.</h3>		   
+			  </div>
+			  {% else %}
+			  			<div class="panel panel-default" style="size:100%">
+			  <div class="panel-heading">
+			    	 <h3 class="panel-title"> Select a container to browse.</h3>
+			      <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#uploadModel">Upload Object</button>			   
+			  </div>
+			  	
+			  		{% if container_info|length == 0 %}
+				  		<div class="panel panel-default">
+						  <div class="panel-body" style="align:center">
+						    No items to display.
+						  </div>
+						</div>
+			  		{% else %}
+					    <table class="table table-bordered">
+						    <tbody>
+						    {% for i in range(container_info|length) %}
+						    	{% if 'subdir' in container_info[i] %}
+						    		<tr>
+						    		<td><a href="/containers/{{ container_name 	}}?dir={{ container_info[i]['subdir_origin'] }}"> {{ container_info[i]['subdir'] }}</a></td>
+						    		<td>pseudo-folder</td>
+						    		<td>
+							    		<a href="/containers/{{ container_name }}?object_name={{ container_info[i]['subdir_origin'] }}&action=delete_object" type="button" class="btn btn-danger">Delete</a>												    												
+						    		</td>
+						    		</tr>
+						    	{% else %}
+							    	<tr>
+							    		<td>{{ container_info[i]['name'] }}</td>
+							    		<td>{{ container_info[i]['bytes']|filesizeformat }}</td>
+							    		<td>
+						    					<!-- Single button -->
+
+											<div class="btn-group">
+											  <button type="button" class="btn btn-primary">View Details</button>
+											  <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+											    <span class="caret"></span>
+											  </button>
+											  <ul class="dropdown-menu">
+											    <li><a href="/containers/{{ container_name }}?object_name={{ container_info[i]['name_origin'] }}&action=download">Download</a></li>
+
+											   <!--  <li><button onclick="httpGet('{{ container_name }}','{{ container_info[i]['name_origin'] }}')">Download</button> </li> -->											  
+											    <li><a href="#">Edit</a></li>
+											    <li><a href="#">Copy</a></li>
+											    <li role="separator" class="divider"></li>
+											    <li><a href="/containers/{{ container_name }}?object_name={{ container_info[i]['name_origin'] }}&action=delete_object" style="color: red">Delete</a></li>
+											  </ul>	
+											  </div>						    			
+							    		</td>
+							    	</tr>
+						    	{% endif %}
+						    {% endfor %}
+						    </tbody>
+						  </table>
+				  	{% endif %}
+				{% endif %}
+			  </div>
+			</div>
+	
+		</td>
+	</tr>
+
+</table>
+<!-- Modal -->
+  <div class="modal fade" id="uploadModel" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Upload object</h4>
+        </div>
+        <div class="modal-body">
+        <form method="POST" action="/{ container_name }}/{{ directory }}/upload">
+        	<input id="input-1a" type="file" class="file" data-show-preview="false">
+        
+        </div>
+        <div class="modal-footer">
+          <input type="submit" class="btn btn-primary" value="Upload Object">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+        </form>
+      </div>
+      
+    </div>
+  </div>
+
+{% endblock %}
